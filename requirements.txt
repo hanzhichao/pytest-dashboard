@@ -1,0 +1,4 @@
+pytest
+flask
+pytest-html
+pytest-owner
