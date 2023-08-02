@@ -60,7 +60,8 @@ class MyPlugin:
                 'tags': tags,
                 'owner': owner,
                 'nodeid': nodeid,
-                'code': code
+                'code': code.rstrip('\n'),
+                'location': item.location
             }
 
 
@@ -69,16 +70,17 @@ class MyPlugin:
 def home():
     plugin = MyPlugin()
     temp_stdout = StringIO()
-    # with redirect_stdout(temp_stdout):  # 不显示命令行输出
-    pytest.main([TEST_PATH, '--co', '-q'], plugins=[plugin])
+    with redirect_stdout(temp_stdout):  # 不显示命令行输出
+        pytest.main([TEST_PATH, '--co', '-q'], plugins=[plugin])
     # print(plugin.testcases)
     return render_template('./testcase_list.html', testcases=plugin.testcases.values())
 
+
 @app.route('/testcase_list.json')
-def testcase_list():
+def testcase_list_data():
     plugin = MyPlugin()
     pytest.main([TEST_PATH, '--co', '-q'], plugins=[plugin])
-    print(plugin.testcases)
+    # print(plugin.testcases)
     return jsonify(list(plugin.testcases.values()))
 
 
@@ -108,6 +110,25 @@ def testplan_add():
 
 @app.route('/testplan_list')
 def testplan_list():
+    # testplans = []
+    # for file_name in os.listdir(TESTPLAN_DIR):
+    #     testplan_name = file_name.replace('.json', '')
+    #     with open(TESTPLAN_DIR / file_name) as f:
+    #         data = json.load(f)
+    #     testcases_count = len(data)
+    #     create_time = time.strftime('%Y年%m月%d日 %H:%M:%S',
+    #                                 time.localtime(os.path.getctime(TESTPLAN_DIR / file_name)))
+    #     testplans.append({
+    #         'testplan_name': testplan_name,
+    #         'testcases_count': testcases_count,
+    #         'create_time': create_time
+    #     })
+    # print('testplans', testplans)
+    return render_template('./testplan_list.html')
+
+
+@app.route('/testplan_list.json')
+def testplan_list_data():
     testplans = []
     for file_name in os.listdir(TESTPLAN_DIR):
         testplan_name = file_name.replace('.json', '')
@@ -119,15 +140,17 @@ def testplan_list():
         testplans.append({
             'testplan_name': testplan_name,
             'testcases_count': testcases_count,
-            'create_time': create_time
+            'create_time': create_time,
+            'testcases': data
         })
-    print('testplans', testplans)
-    return render_template('./testplan_list.html', testplans=testplans)
+    return jsonify(testplans)
+
+
+
 
 
 @app.route('/testplan_run', methods=['GET', 'POST'])
 def testplan_run():
-    plugin = MyPlugin()
     testplan_name = request.args.get('testplan_name')
     testplan_file = TESTPLAN_DIR / f'{testplan_name}.json'
     print('testplan_file', testplan_file)
@@ -139,8 +162,7 @@ def testplan_run():
     sys.path.append(str(ROOT_DIR))
     print('testcase_paths', testcase_paths)
     # os.remove(REPORT_DIR / "report.html")
-    pytest.main([*testcase_paths, '-v', f'--html={REPORT_DIR / "report.html"}', '--self-contained-html'],
-                plugins=[plugin])
+    pytest.main([*testcase_paths, '-v', f'--html={REPORT_DIR / "report.html"}', '--self-contained-html'])
     return redirect('/testplan_report')
 
 
@@ -152,6 +174,57 @@ def testplan_report():
 @app.route('/report')
 def report():
     return render_template('./report.html')
+
+
+@app.route('/testcase_update', methods=['POST'])
+def testcase_update():
+    nodeid = request.form.get('nodeid')
+    code = request.form.get('code')
+    code_lines = [item + '\n' for item in code.split('\n')]
+
+    plugin = MyPlugin()
+    print('nodeid', nodeid)
+    # import sys
+    # sys.path.append(str(ROOT_DIR))
+    pytest.main([str(ROOT_DIR / nodeid), '--co', '-q'], plugins=[plugin])
+    # testcase = plugin.testcases[0]
+    testcase = list(plugin.testcases.values())[0]
+    # print(repr(testcase['code']))
+    start_line = testcase['location'][1]
+    line_num = len(testcase['code'].split('\n'))
+
+    before_lines = []
+    after_lines = []
+    script_file = ROOT_DIR / nodeid.split('::')[0]
+    with open(script_file, encoding='utf-8') as f:
+        for i in range(start_line - 1):
+            before_lines.append(f.readline())
+        for i in range(line_num + 1):
+            print(f.readline().strip('\n'))
+
+    with open(script_file, 'w', encoding='utf-8') as f:
+        f.writelines(before_lines + code_lines + after_lines)
+
+        after_lines = f.readlines()
+
+    # import_path = script_file[:-3].replace('/', '.')
+
+    # print(import_path)
+    # test_module = importlib.import_module(import_path)
+    return 'ok'
+
+
+@app.route('/testcase_update', methods=['POST'])
+def testcase_add():
+    code = request.form.get('code')
+    module = request.form.get('module')
+    script_file = TEST_PATH / f'{module}.py'
+    if not script_file.exists():
+        with open(script_file, 'w', encoding='utf') as f:
+            f.write(code)
+    else:
+        with open(script_file, 'a', encoding='utf') as f:
+            f.write('\n' + code)
 
 
 if __name__ == '__main__':

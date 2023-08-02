@@ -43,7 +43,7 @@
            data-show-refresh="true" data-show-columns="true" data-show-columns-toggle-all="true"
            data-show-pagination-switch="true" data-show-toggle="true" data-show-fullscreen="true"
            data-detail-view="true" data-detail-formatter="detailFormatter"
-           data-detail-view-icon="false" data-detail-view-by-click="true">
+           data-detail-view-icon="false" data-detail-view-by-click="true" data-loading-template="loadingTemplate">
         <thead>
         <tr>
             <th data-searchable="false" data-checkbox="true"></th>
@@ -162,6 +162,9 @@
             }
         })
         return html.join('')
+    }
+    function loadingTemplate(message) {
+        return '<i class="fa fa-spinner fa-spin fa-fw"></i>'
     }
 </script>
 

@@ -1,4 +1,5 @@
 pytest
 flask
-pytest-html
+pytest-html-cn
 pytest-owner
+pytest-level
