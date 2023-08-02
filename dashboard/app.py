@@ -12,11 +12,11 @@ from flask import Flask, render_template, request, redirect, jsonify
 
 app = Flask(__name__)
 
+
 ROOT_DIR = Path(__file__).parent.parent
 TEST_PATH = ROOT_DIR / 'testcases'
-TESTPLAN_DIR = ROOT_DIR / 'web' / 'testplans'
-REPORT_DIR = ROOT_DIR / 'web' / 'templates'
-
+TESTPLAN_DIR = Path(__file__).parent / 'testplans'
+REPORT_DIR = Path(__file__).parent / 'templates'
 
 
 
